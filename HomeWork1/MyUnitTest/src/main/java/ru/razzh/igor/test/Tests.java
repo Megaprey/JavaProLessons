@@ -17,14 +17,26 @@ public class Tests {
     }
 
     @BeforeTest
-    public void doBeforeEachTests() {
+    public void doBeforeEachTestsFirst() {
         System.out.println("@@@@@@@@@@@@@@@@@@@@");
-        System.out.println("do before each tests");
+        System.out.println("do before each tests first");
+    }
+
+    @BeforeTest
+    public void doBeforeEachTestsSecond() {
+        System.out.println("@@@@@@@@@@@@@@@@@@@@");
+        System.out.println("do before each tests second");
     }
 
     @AfterTest
-    public void doAfterEachTests() {
-        System.out.println("do after each tests");
+    public void doAfterEachTestsFirst() {
+        System.out.println("do after each tests first");
+        System.out.println("$$$$$$$$$$$$$$$$$$$");
+    }
+
+    @AfterTest
+    public void doAfterEachTestsSecond() {
+        System.out.println("do after each tests second");
         System.out.println("$$$$$$$$$$$$$$$$$$$");
     }
 

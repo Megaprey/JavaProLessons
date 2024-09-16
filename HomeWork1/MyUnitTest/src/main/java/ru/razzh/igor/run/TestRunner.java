@@ -1,7 +1,7 @@
 package ru.razzh.igor.run;
 
 import ru.razzh.igor.annotation.*;
-import ru.razzh.igor.test.Tests;
+import ru.razzh.igor.pojo.MethodContainer;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -10,89 +10,78 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class TestRunner {
-    public static void runTests(Class c) {
-        throwExceptionIfAnnotationNotUnique(c, BeforeSuite.class);
-        throwExceptionIfAnnotationNotUnique(c, AfterSuite.class);
-        throwExceptionIfAnnotationNotUnique(c, BeforeTest.class);
-        throwExceptionIfAnnotationNotUnique(c, AfterTest.class);
-
-        try {
-            runMethods(c);
-        } catch (InvocationTargetException e) {
-            throw new RuntimeException(e);
-        } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
-        }
+    public static void runTests(Class c) throws InvocationTargetException, IllegalAccessException, NoSuchMethodException, InstantiationException {
+        runMethods(c);
     }
 
-    private static void runMethods(Class c) throws InvocationTargetException, IllegalAccessException {
-        Tests tests = new Tests();
+    private static void runMethods(Class c) throws InvocationTargetException, IllegalAccessException, NoSuchMethodException, InstantiationException {
+        Object instance = c.getConstructor().newInstance();
         Method[] methods = c.getMethods();
-        Method beforeSuiteMethod = findMethodWithAnnotation(methods, BeforeSuite.class);
-        Method afterSuiteMethod = findMethodWithAnnotation(methods, AfterSuite.class);
-        Method beforeTestMethod = findMethodWithAnnotation(methods, BeforeTest.class);
-        Method afterTestMethod = findMethodWithAnnotation(methods, AfterTest.class);
 
-        callAnyMethod(beforeSuiteMethod, tests);
+        MethodContainer methodContainer = getMethodsWithAnnotation(methods);
+        Method beforeSuiteMethod = methodContainer.getBeforSuiteMethod();
+        Method afterSuiteMethod = methodContainer.getAfterSuiteMethod();
 
-        runMethodsMarkTestOnPriority(getMethodsWihTest(methods, Test.class), beforeTestMethod, afterTestMethod, tests);
+        callAnyMethod(beforeSuiteMethod, instance);
 
-        callAnyMethod(afterSuiteMethod, tests);
+        runMethodsMarkTestOnPriority(methodContainer, instance);
+
+        callAnyMethod(afterSuiteMethod, instance);
     }
 
-    private static void runMethodsMarkTestOnPriority(List<Method> methods, Method beforeTestMethod, Method afterTestMethod,
-                                                     Tests tests) throws InvocationTargetException, IllegalAccessException {
-        methods.sort((m1, m2) -> m2.getDeclaredAnnotation(Test.class).priority() - m1.getDeclaredAnnotation(Test.class).priority());
-        for (Method m : methods) {
+    private static void runMethodsMarkTestOnPriority(MethodContainer methodContainer,
+                                                     Object instance) throws InvocationTargetException, IllegalAccessException {
+        ArrayList<Method> marksTestMethods = methodContainer.getTestMethods();
+        marksTestMethods.sort((m1, m2) -> m2.getDeclaredAnnotation(Test.class).priority() - m1.getDeclaredAnnotation(Test.class).priority());
+        for (Method m : marksTestMethods) {
             if (m != null) {
-                callAnyMethod(beforeTestMethod, tests);
-                callAnyMethod(m, tests);
-                callAnyMethod(afterTestMethod, tests);
+                for (Method beforeTestMethod : methodContainer.getBeforeTestMethods()) {
+                    callAnyMethod(beforeTestMethod, instance);
+                }
+                callAnyMethod(m, instance);
+                for (Method afterTestMethod : methodContainer.getAfterTestMethods()) {
+                    callAnyMethod(afterTestMethod, instance);
+                }
             }
         }
     }
 
-    private static ArrayList<Method> getMethodsWihTest(Method[] methods, Class annotation) {
-        ArrayList<Method> meths = new ArrayList<>();
+
+    private static MethodContainer getMethodsWithAnnotation(Method[] methods) {
+        MethodContainer methodContainer = new MethodContainer();
+        methodContainer.setTestMethods(new ArrayList<>());
+        methodContainer.setBeforeTestMethods(new ArrayList<>());
+        methodContainer.setAfterTestMethods(new ArrayList<>());
+        int afterSuiteCount = 0;
+        int beforeSuiteCount = 0;
         for (Method m : methods ) {
-            if (m.isAnnotationPresent(annotation)) {
-                meths.add(m);
+            if (m.isAnnotationPresent(AfterSuite.class)) {
+                afterSuiteCount++;
+                if (afterSuiteCount > 1) {
+                    throw new RuntimeException("Only one method can be marked with @AfterSuite annotation in a class");
+                }
+                methodContainer.setAfterSuiteMethod(m);
+            } else if (m.isAnnotationPresent(BeforeSuite.class)) {
+                beforeSuiteCount++;
+                if (beforeSuiteCount > 1) {
+                    throw new RuntimeException("Only one method can be marked with @BeforeSuite annotation in a class");
+                }
+                methodContainer.setBeforeSuiteMethod(m);
+            } else if (m.isAnnotationPresent(BeforeTest.class)) {
+                methodContainer.getBeforeTestMethods().add(m);
+            } else if (m.isAnnotationPresent(AfterTest.class)) {
+                methodContainer.getAfterTestMethods().add(m);
+            } else if (m.isAnnotationPresent(Test.class)) {
+                methodContainer.getTestMethods().add(m);
             }
         }
-        return meths;
+        return methodContainer;
     }
 
-    private static Method findMethodWithAnnotation(Method[] methods, Class annotation) {
-        for (Method m : methods ) {
-            if (m.isAnnotationPresent(annotation)) {
-                return m;
-            }
-        }
-        return null;
-    }
 
-    private static void throwExceptionIfAnnotationNotUnique(Class c, Class<?> annotation) {
-        if(!checksUniqueMethodMarkAnnotation(c, annotation)) {
-            throw new RuntimeException("Only one method can be marked with @" + annotation.getSimpleName() +
-                    " annotation in a class");
-        }
-    }
 
-    private static boolean checksUniqueMethodMarkAnnotation(Class clazz, Class annotation) {
-        Method[] methods = clazz.getDeclaredMethods();
-        int count = 0;
-        for (Method method : methods) {
-            if (method.isAnnotationPresent(annotation)) {
-                count++;
-            }
-        }
-        if (count > 1) {
-            return false;
-        }
-        return true;
-    }
 
-    private static void callMethodWithParametrs(Method meth, String param, Tests tests) throws InvocationTargetException, IllegalAccessException {
+    private static void callMethodWithParametrs(Method meth, String param, Object instance) throws InvocationTargetException, IllegalAccessException {
         Parameter[] params = meth.getParameters();
         String[] stringParams = param.split(",");
         Object[] args = new Object[params.length];
@@ -119,17 +108,17 @@ public class TestRunner {
                 args[i] = params[i].getType().cast(strParam);
             }
         }
-        meth.invoke(tests, args);
+        meth.invoke(instance, args);
     }
 
-    private static void callAnyMethod(Method meth, Tests tests) throws InvocationTargetException, IllegalAccessException {
+    private static void callAnyMethod(Method meth, Object instance) throws InvocationTargetException, IllegalAccessException {
 
-        if (meth.isAnnotationPresent(CsvSource.class) && meth != null) {
+        if (meth != null && meth.isAnnotationPresent(CsvSource.class)) {
             String param = meth.getAnnotation(CsvSource.class).parametrs();
-            callMethodWithParametrs(meth, param, tests);
+            callMethodWithParametrs(meth, param, instance);
         } else {
             if(meth != null) {
-                meth.invoke(tests);
+                meth.invoke(instance);
             }
         }
     }
