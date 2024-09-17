@@ -10,11 +10,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class TestRunner {
-    public static void runTests(Class c) throws InvocationTargetException, IllegalAccessException, NoSuchMethodException, InstantiationException {
+    public static void runTests(Class c) throws Exception {
         runMethods(c);
     }
 
-    private static void runMethods(Class c) throws InvocationTargetException, IllegalAccessException, NoSuchMethodException, InstantiationException {
+    private static void runMethods(Class c) throws Exception {
         Object instance = c.getConstructor().newInstance();
         Method[] methods = c.getMethods();
 
@@ -116,10 +116,8 @@ public class TestRunner {
         if (meth != null && meth.isAnnotationPresent(CsvSource.class)) {
             String param = meth.getAnnotation(CsvSource.class).parametrs();
             callMethodWithParametrs(meth, param, instance);
-        } else {
-            if(meth != null) {
-                meth.invoke(instance);
-            }
+        } else if(meth != null) {
+            meth.invoke(instance);
         }
     }
 
