@@ -4,6 +4,7 @@ import java.util.*;
 
 import ru.razzh.igor.pojo.Worker;
 
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class AppClass {
@@ -43,12 +44,12 @@ public class AppClass {
 
     //2
     public static Integer thirdBiggestNumber(List<Integer> list) {
-        return list.stream().sorted(Collections.reverseOrder()).toList().get(2);
+        return list.stream().sorted(Collections.reverseOrder()).limit(3).sorted().findFirst().orElse(0);
     }
 
     //3
     public static Integer thirdBiggestUniqueNumber(List<Integer> list) {
-        return list.stream().distinct().sorted(Collections.reverseOrder()).toList().get(2);
+        return list.stream().distinct().sorted(Collections.reverseOrder()).limit(3).sorted().findFirst().orElse(0);
     }
 
     //4
@@ -58,8 +59,8 @@ public class AppClass {
     }
 
     //5
-    public static Integer averageAgeEngineers(List<Worker> list) {
-        return list.stream().map(Worker::getAge).collect(Collectors.averagingInt(Integer::intValue)).intValue();
+    public static Double averageAgeEngineers(List<Worker> list) {
+        return list.stream().map(Worker::getAge).collect(Collectors.averagingDouble(num -> Double.valueOf(num))).doubleValue();
     }
 
     //6
@@ -68,9 +69,9 @@ public class AppClass {
     }
 
     //7
-    public static Map<String, Integer> getMapWithCountWordsInString(String s) {
+    public static Map<String, Long> getMapWithCountWordsInString(String s) {
         return Arrays.stream(s.split("\\s+"))
-                .collect(HashMap::new, (map, word) -> map.put(word, map.getOrDefault(word, 0) + 1), HashMap::putAll);
+                .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
     }
 
     //8
