@@ -32,7 +32,7 @@ public class ThreadPool implements Executor {
     public void shutdown() {
         isShutdown = true;
         threads.stream().forEach(ExecuteGoalThread::shutdown);
-//        ConsumerProducerBox.getMonitor().notifyAll();
+        new ExecuteShutdownThread(taskCollector, threads).start();
     }
 
     public void awaitTermination() {

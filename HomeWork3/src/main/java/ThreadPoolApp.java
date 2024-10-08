@@ -16,8 +16,11 @@ public class ThreadPoolApp {
                 waitMin(0.1);
             });
         }
-        System.out.println("shotdown");
-        threadPool.shutdown();
+//        System.out.println("shotdown");
+//        threadPool.shutdown();
+        threadPool.awaitTermination();
+        waitMin(0.1);
+        System.out.println("Stream is closed I liked!!!");
 
     }
 

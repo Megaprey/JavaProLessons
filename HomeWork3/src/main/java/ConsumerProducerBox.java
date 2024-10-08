@@ -14,7 +14,6 @@ public class ConsumerProducerBox {
     private LinkedList<Runnable> queue = new LinkedList<>();
 
     public Runnable take() {
-        Runnable task;
         synchronized (monitor) {
             if (queue.isEmpty()) {
                 try {
@@ -28,7 +27,7 @@ public class ConsumerProducerBox {
                 return new Runnable() {
                     @Override
                     public void run() {
-
+                        System.out.println("isShotdown");
                     }
                 };
             }
@@ -36,7 +35,7 @@ public class ConsumerProducerBox {
         }
     }
 
-    public boolean isEmpty() {
+    public boolean isQueueEmpty() {
         synchronized (monitor) {
             return queue.isEmpty();
         }

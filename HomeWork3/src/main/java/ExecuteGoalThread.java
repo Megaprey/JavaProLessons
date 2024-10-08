@@ -9,7 +9,7 @@ public class ExecuteGoalThread extends Thread {
 
     @Override
     public void run() {
-        while (running && (!isShutdown || !taskHanlers.isEmpty())) {
+        while (running && (!isShutdown || !taskHanlers.isQueueEmpty())) {
             System.out.println(Thread.currentThread().getName() + " is running.");
             taskHanlers.take().run();
         }
