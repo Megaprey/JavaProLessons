@@ -1,22 +1,23 @@
+import java.util.List;
+
 public class ExecuteGoalThread extends Thread {
-    private ConsumerProducerBox taskHanlers;
     private boolean running = true;
     private boolean isShutdown = false;
+    private ThreadPool threadPool;
 
-    public ExecuteGoalThread(ConsumerProducerBox taskHanlers) {
-        this.taskHanlers = taskHanlers;
+    public ExecuteGoalThread(ThreadPool threadPool) {
+        this.threadPool = threadPool;
     }
 
     @Override
     public void run() {
-        while (running && (!isShutdown || !taskHanlers.isQueueEmpty())) {
+        while (running && (!isShutdown || !threadPool.isQueueEmpty())) {
             System.out.println(Thread.currentThread().getName() + " is running.");
-            taskHanlers.take().run();
+            threadPool.take().run();
         }
     }
 
     public void shutdown() {
         isShutdown = true;
-        ConsumerProducerBox.setIsShotdown(true);
     }
 }

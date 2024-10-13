@@ -1,17 +1,23 @@
 import java.util.LinkedList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ThreadPool implements Executor {
     private int capacity;
-    private boolean isShutdown = false;
-    LinkedList<ExecuteGoalThread> threads;
-    ConsumerProducerBox taskCollector = new ConsumerProducerBox();
+    private AtomicBoolean isShutdown = new AtomicBoolean(false);
+    private LinkedList<ExecuteGoalThread> threads;
+    private LinkedList<Runnable> queue = new LinkedList<>();
+    private final static Object monitor = new Object();
+
+    public static Object getMonitor() {
+        return monitor;
+    }
 
     public ThreadPool(int capacity) {
         threads = new LinkedList<>();
         for (int i = 0; i < capacity; i++) {
-            ExecuteGoalThread thread = new ExecuteGoalThread(taskCollector);
+            ExecuteGoalThread thread = new ExecuteGoalThread(this);
             threads.add(thread);
             thread.start();
         }
@@ -19,20 +25,46 @@ public class ThreadPool implements Executor {
 
     @Override
     public void execute(Runnable command) {
-        Object monitor = ConsumerProducerBox.getMonitor();
         synchronized (monitor){
-            if (isShutdown) {
+            if (isShutdown.get()) {
                 monitor.notifyAll();
                 throw new IllegalStateException("ThreadPool is closed");
             }
+            queue.addLast(command);
+            monitor.notify();
         }
-        taskCollector.put(command);
+    }
+
+    public Runnable take() {
+        synchronized (monitor) {
+            if (queue.isEmpty()) {
+                try {
+                    System.out.println(Thread.currentThread().getName() + " : ушел в вейт");
+                    monitor.wait();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            if (queue.isEmpty() && isShutdown.get()) {
+                return new Runnable() {
+                    @Override
+                    public void run() {}
+                };
+            }
+            return queue.removeFirst();
+        }
+    }
+
+    public boolean isQueueEmpty() {
+        synchronized (monitor) {
+            return queue.isEmpty();
+        }
     }
 
     public void shutdown() {
-        isShutdown = true;
+        isShutdown.set(true);
         threads.stream().forEach(ExecuteGoalThread::shutdown);
-        new ExecuteShutdownThread(taskCollector, threads).start();
+        new ExecuteShutdownThread(this, threads).start();
     }
 
     public void awaitTermination() {

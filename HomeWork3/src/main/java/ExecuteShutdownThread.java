@@ -2,11 +2,11 @@ import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ExecuteShutdownThread  extends Thread {
-    private ConsumerProducerBox taskHanlers;
+    private ThreadPool threadPool;
     private LinkedList<ExecuteGoalThread> threads;
 
-    public ExecuteShutdownThread(ConsumerProducerBox taskHanlers, LinkedList<ExecuteGoalThread> threads) {
-        this.taskHanlers = taskHanlers;
+    public ExecuteShutdownThread(ThreadPool threadPool, LinkedList<ExecuteGoalThread> threads) {
+        this.threadPool = threadPool;
         this.threads = threads;
     }
 
@@ -14,8 +14,8 @@ public class ExecuteShutdownThread  extends Thread {
     public void run() {
         System.out.println("shutdown is HELLO");
         AtomicBoolean allThreadsAreDone = new AtomicBoolean(false);
-        Object monitor = ConsumerProducerBox.getMonitor();
-        while (!taskHanlers.isQueueEmpty()) {
+        Object monitor = threadPool.getMonitor();
+        while (!threadPool.isQueueEmpty()) {
         }
         while (!allThreadsAreDone.get()) {
             allThreadsAreDone.set(true);
