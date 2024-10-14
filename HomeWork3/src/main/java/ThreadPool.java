@@ -8,9 +8,9 @@ public class ThreadPool implements Executor {
     private AtomicBoolean isShutdown = new AtomicBoolean(false);
     private LinkedList<ExecuteGoalThread> threads;
     private LinkedList<Runnable> queue = new LinkedList<>();
-    private final static Object monitor = new Object();
+    private final Object monitor = new Object();
 
-    public static Object getMonitor() {
+    public Object getMonitor() {
         return monitor;
     }
 
